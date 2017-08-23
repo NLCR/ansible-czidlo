@@ -1,0 +1,41 @@
+---
+# REMOVE WARs FIRST
+- name: CZIDLO | Remove WARs from {{ tomcat_home }}/webapps/
+  file: path="{{ tomcat_home }}/webapps/{{item}}.war" state="absent"
+  with_items:
+  - processDataServer
+  - api
+  - web
+  - oaiPmhProvider
+
+- name: CZIDLO | Ensure WARs are undeployed
+  wait_for: path="{{ tomcat_home }}/webapps/{{item}}/META-INF/context.xml" state="absent"
+  with_items:
+  - processDataServer
+  - api
+  - web
+  - oaiPmhProvider
+
+# PREPARE DIR STRUCTURE FOR CZIDLO
+- name: CZIDLO | Ensure these dirs exists.
+  file: path="{{ item }}" state="directory" owner="{{ tomcat_user }}" group="{{ tomcat_group }}"
+  with_items: 
+  - "{{ czidlo_log_dir }}"
+  - "{{ czidlo_dir }}"
+
+- name: CZIDLO | Download and extract CZIDLO {{ czidlo_version }}
+  unarchive:
+    src="{{ czidlo_download_url }}"
+    dest="{{ czidlo_dir }}"
+    copy="no"
+    creates="{{ czidlo_dir }}/README.md"
+  register: "czidlo_downloaded"
+
+# Prepare database
+- include: database.yml
+# Deploy WARs and configure them
+- include: processDataServer.yml
+- include: api.yml
+- include: web.yml
+- include: oai.yml
+...
